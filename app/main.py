@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from strawberry.fastapi import GraphQLRouter
+import logging
 
 from app.schema import schema
+
+LOGGER = logging.getLogger(name="MAIN")
 
 app = FastAPI()
 
