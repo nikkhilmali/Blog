@@ -1,14 +1,14 @@
+import logging
+import re
 from datetime import datetime, timezone
 
-from graphql import GraphQLError
 import strawberry
 from bson import ObjectId
-from fastapi import HTTPException
-import logging
+from graphql import GraphQLError
 
 from app.db import get_collection
-from app.graphql.types import BlogResponseType, UserResponseType
-
+from app.graphql.types import (BlogResponseType, UserLoginResponseType,
+                               UserResponseType)
 
 LOGGER = logging.getLogger(name="MUTATION")
 
@@ -20,6 +20,22 @@ class Mutation:
         self, username: str, email: str, password: str
     ) -> UserResponseType:
 
+        user_data = {"username": username, "email": email, "password": password}
+        user_collection = get_collection("user")
+
+        # user = 
+        if await user_collection.find_one({"username":username}):
+            raise GraphQLError("Username is already Take")
+
+        if await user_collection.find_one({"email": email}):
+            raise GraphQLError("Already Registred, Kindly Login")
+
+        username_regex = r"^(?!.*\.\.)[a-zA-Z0-9._]{1,30}$"
+        if not username or not isinstance(username, str) or not re.match(username_regex, username) or username.startswith('.') or username.endswith('.'):
+            raise ValueError(
+                "Invalid username. It must be 1-30 characters long, can contain letters, numbers, underscores, and periods, but cannot start/end with a period or have consecutive periods."
+            )
+
         if not email or not isinstance(email, str) or "@" not in email:
             raise ValueError("Invalid email. Please provide a valid email address.")
 
@@ -28,8 +44,6 @@ class Mutation:
                 "Invalid password. Password must be at least 8 characters long."
             )
 
-        user_data = {"username": username, "email": email, "password": password}
-        user_collection = get_collection("user")
         obj = await user_collection.insert_one(user_data)
         print("user_obj")
         print(obj)
@@ -73,7 +87,7 @@ class Mutation:
         try:
             blog_obj_id = ObjectId(blog_id)
         except Exception:
-            raise GraphQLError("Invalid blog ID format")
+            raise GraphQLError("Not Found, Invalid blog ID")
 
         blog_obj = await blog_collection.find_one({"_id": blog_obj_id})
         if not blog_obj:
@@ -105,4 +119,28 @@ class Mutation:
             dislike=updated_blog["dislike"],
             created_at=updated_blog["created_at"],
             content=updated_blog["content"],
+        )
+
+    @strawberry.mutation
+    async def login(self, username:str, password:str)->UserLoginResponseType:
+        user_collection = get_collection("user")
+
+        field = "username"
+
+        if '@' in username:
+            field = "email"
+
+        user_obj = await user_collection.find_one({field: username})
+
+        if not user_obj:
+            raise GraphQLError("USER WITH USERNAME DOES NOT EXIST !")
+
+        if password != user_obj.get("password"):
+            raise ValueError("Incorrect Password !!, Try Again....")
+
+        return UserLoginResponseType(
+            id=user_obj.get("_id"),
+            username=user_obj.get("username"),
+            email=user_obj.get("email"),
+            message="Login Successful !!"
         )

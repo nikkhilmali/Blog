@@ -11,3 +11,11 @@ class UserCreateType:
 @strawberry.type
 class UserResponseType(UserCreateType):
     id: str
+
+
+@strawberry.type
+class UserLoginResponseType:
+    id: str
+    username:str
+    email: str
+    message:str

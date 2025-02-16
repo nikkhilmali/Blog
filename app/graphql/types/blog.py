@@ -15,3 +15,12 @@ class BlogResponseType(BlogCreateType):
     like: int
     dislike: int
     created_at: datetime
+
+
+@strawberry.type
+class BlogHomeResponseType(BlogCreateType):
+    id: str
+    username: str
+    like: int
+    dislike: int
+    created_at: datetime
